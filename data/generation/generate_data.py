@@ -125,7 +125,7 @@ class dataset_generator:
                                          rescale=self.rescale)
 
         self.generator.init_variables()
-        self.generator.save_dag_cpdag(self.folder, i+1)
+        self.generator.save_dag_cpdag(self.folder, self.i_dataset + 1)
 
     def _pick_targets(self, nb_max_iteration=100000):
         nodes = np.arange(self.nb_nodes)
