@@ -84,7 +84,7 @@ class DagGenerator:
                  noise_coeff=.4,
                  cause=gaussian_cause,
                  npoints=500, nodes=8, expected_density=3,
-                 dag_type='erdos', rescale=False, f1=None, f2=None):
+                 dag_type='sf', rescale=False, f1=None, f2=None):
         super().__init__()
         self.mechanism = {'linear': LinearMechanism,
                           'polynomial': Polynomial_Mechanism,
@@ -191,7 +191,19 @@ class DagGenerator:
                 nb_parents = np.random.randint(0, min([self.parents_max, j])+1)
                 for i in np.random.choice(range(0, j), nb_parents, replace=False):
                     self.adjacency_matrix[i, j] = 1
+ 
+        elif self.dag_type == 'sf':
+            m = int(round(self.expected_density / 2))
+            self.adjacency_matrix = np.zeros([self.nodes, self.nodes])
 
+            bag = [0]
+            for ii in range(1, self.nodes):
+                dest = np.random.choice(bag, size=m)
+                for jj in dest:
+                    self.adjacency_matrix[ii, jj] = 1
+                bag.append(ii)
+                bag.extend(dest) 
+        self.g = nx.DiGraph(self.adjacency_matrix)
         try:
             self.g = nx.DiGraph(self.adjacency_matrix)
             assert not list(nx.simple_cycles(self.g))
@@ -413,3 +425,33 @@ class DagGenerator:
         else:
             raise ValueError("Graph has not yet been generated. \
                               Use self.generate() to do so.")
+
+    def load_dag(self, dag_path, verbose=False):
+        """Redefine the causes, mechanisms and the structure of the graph,
+        called by ``self.generate()`` if never called.
+
+        Args:
+            verbose (bool): Verbosity
+        """
+        self.adjacency_matrix = np.load(dag_path)
+        self.original_adjacency_matrix = np.copy(self.adjacency_matrix)
+        self.g = nx.DiGraph(self.adjacency_matrix)
+        # Mechanisms
+        self.original_cfunctions = []
+        for i in range(self.nodes):
+            if sum(self.adjacency_matrix[:, i]):
+                if self.mechanism is PostNonLinear_Mechanism:
+                    self.original_cfunctions.append(self.mechanism(int(sum(self.adjacency_matrix[:, i])), self.npoints, self.noise, f1=self.f1, f2=self.f2, noise_coeff=self.noise_coeff))
+                else:
+                    self.original_cfunctions.append(self.mechanism(int(sum(self.adjacency_matrix[:, i])), self.npoints, self.noise, noise_coeff=self.noise_coeff))
+            else:
+                self.original_cfunctions.append(self.initial_generator)
+
+        # = [self.mechanism(int(sum(self.adjacency_matrix[:, i])), self.npoints, self.noise, noise_coeff=self.noise_coeff) if sum(self.adjacency_matrix[:, i]) else self.initial_generator for i in range(self.nodes)]
+
+        # increase nb_step in order to save the gaussian processes
+        if self.causal_mechanism == 'gp_mix':
+            for cfunction in self.original_cfunctions:
+                if isinstance(cfunction, GaussianProcessMix_Mechanism):
+                    cfunction.nb_step += 1
+        self.cfunctions = self.original_cfunctions[:]
