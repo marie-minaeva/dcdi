@@ -83,7 +83,7 @@ class DagGenerator:
     def __init__(self, causal_mechanism, noise='gaussian',
                  noise_coeff=.4,
                  cause=gaussian_cause,
-                 npoints=500, nodes=8, expected_density=3,
+                 npoints=500, nodes=8, expected_density=4,
                  dag_type='sf', rescale=False, f1=None, f2=None):
         super().__init__()
         self.mechanism = {'linear': LinearMechanism,
@@ -193,7 +193,8 @@ class DagGenerator:
                     self.adjacency_matrix[i, j] = 1
  
         elif self.dag_type == 'sf':
-            m = int(round(self.expected_density / 2))
+            print("H E R E")
+            m = 2 #int(round(self.expected_density / 2))
             self.adjacency_matrix = np.zeros([self.nodes, self.nodes])
 
             bag = [0]
@@ -436,6 +437,7 @@ class DagGenerator:
         self.adjacency_matrix = np.load(dag_path)
         self.original_adjacency_matrix = np.copy(self.adjacency_matrix)
         self.g = nx.DiGraph(self.adjacency_matrix)
+        self.nodes = self.adjacency_matrix.shape[0]
         # Mechanisms
         self.original_cfunctions = []
         for i in range(self.nodes):
